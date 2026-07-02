@@ -59,14 +59,58 @@
             color: #8e8e93;
         }
 
-        input, select {
+        /* Fixed date height and matching styling based on image.png */
+        input[type="date"], input[type="number"], input[type="text"], select {
             width: 100%;
-            padding: 12px;
+            height: 44px; /* Standard iOS touch target height */
+            padding: 0 12px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            font-size: 16px; /* Prevents iOS auto-zoom on focus */
+            font-size: 16px; 
             box-sizing: border-box;
             background: #fafafa;
+            -webkit-appearance: none; /* Prevents iOS default styling overrides */
+            appearance: none;
+        }
+
+        /* Specifically align text for native iOS date field */
+        input[type="date"] {
+            display: flex;
+            align-items: center;
+            line-height: 44px;
+        }
+
+        /* Custom styling for file upload button to make it iOS native looking */
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-btn {
+            width: 100%;
+            height: 44px;
+            background: #fafafa;
+            border: 1px dashed #8e8e93;
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
         }
 
         button {
@@ -106,6 +150,7 @@
 <div class="container">
     <h1>EV Expense Tracker</h1>
     
+    <!-- Input Card -->
     <div class="card">
         <form id="expenseForm">
             <div class="form-group">
@@ -129,14 +174,26 @@
                 <label for="notes">Notes (Optional)</label>
                 <input type="text" id="notes" placeholder="e.g., Supercharger downtown">
             </div>
+            
+            <!-- Attachment Field -->
+            <div class="form-group">
+                <label>Attachment (Saved to Files App on Log)</label>
+                <div class="file-input-wrapper">
+                    <div class="file-input-btn" id="fileLabel">Tap to Select File/Photo</div>
+                    <input type="file" id="attachment" accept="image/*,application/pdf">
+                </div>
+            </div>
+
             <button type="submit">Log Expense</button>
         </form>
     </div>
 
+    <!-- Data Management Card -->
     <div class="card">
-        <button id="exportBtn" class="secondary">Save Log to iPhone Files</button>
+        <button id="exportBtn" class="secondary">Save CSV Log to iPhone Files</button>
     </div>
 
+    <!-- Recent History Card -->
     <div class="card">
         <h3 style="margin-top: 0; font-size: 16px;">Recent Entries (Local Cache)</h3>
         <div id="logHistory"></div>
@@ -144,16 +201,27 @@
 </div>
 
 <script>
-    // Automatically set today's date
     document.getElementById('date').valueAsDate = new Date();
 
     let expenses = JSON.parse(localStorage.getItem('ev_expenses')) || [];
+    let selectedFileBlob = null;
+    let selectedFileName = "";
+
+    // Update UI when file is chosen
+    document.getElementById('attachment').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            selectedFileBlob = file;
+            selectedFileName = file.name;
+            document.getElementById('fileLabel').innerText = `Selected: ${file.name.substring(0, 20)}...`;
+            document.getElementById('fileLabel').style.borderColor = "var(--accent-color)";
+        }
+    });
 
     function updateHistoryDisplay() {
         const historyContainer = document.getElementById('logHistory');
         historyContainer.innerHTML = '';
         
-        // Show last 5 items
         const recent = expenses.slice(-5).reverse();
         if (recent.length === 0) {
             historyContainer.innerHTML = '<p style="color:#8e8e93; font-size:14px; margin:0;">No entries yet.</p>';
@@ -188,26 +256,40 @@
         expenses.push(newExpense);
         localStorage.setItem('ev_expenses', JSON.stringify(expenses));
         
-        // Reset form fields except date
-        document.getElementById('amount').value = '';
-        document.getElementById('notes').value = '';
+        // If an attachment exists, trigger an immediate native save prompt to Files App
+        if (selectedFileBlob) {
+            const url = URL.createObjectURL(selectedFileBlob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Receipt_${newExpense.date}_${selectedFileName}`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up state
+            selectedFileBlob = null;
+            selectedFileName = "";
+            document.getElementById('fileLabel').innerText = "Tap to Select File/Photo";
+            document.getElementById('fileLabel').style.borderColor = "#8e8e93";
+        }
+        
+        document.getElementById('expenseForm').reset();
+        document.getElementById('date').valueAsDate = new Date();
         
         updateHistoryDisplay();
     });
 
-    // Handle Exporting directly to Files via native download
+    // Handle Exporting CSV to Files via download
     document.getElementById('exportBtn').addEventListener('click', function() {
         if (expenses.length === 0) {
             alert("No data to export yet!");
             return;
         }
 
-        // Generate clean CSV format
         const headers = ["Date", "Type", "Amount", "Notes"];
         const rows = expenses.map(e => `"${e.date}","${e.type}","${e.amount}","${e.notes.replace(/"/g, '""')}"`);
         const csvContent = [headers.join(","), ...rows].join("\n");
 
-        // Create Blob and trigger download
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         
@@ -220,7 +302,6 @@
         document.body.removeChild(link);
     });
 
-    // Initial render
     updateHistoryDisplay();
 </script>
 
