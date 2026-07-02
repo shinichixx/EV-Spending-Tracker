@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EV Tracker - Pro Edition</title>
+    <title>EV Analytics - Dashboard</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="EV Tracker">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root {
             --bg-color: #12161a;
             --card-color: #1a2126;
             --text-color: #ffffff;
             --text-secondary: #8a96a0;
-            --accent-color: #2196f3; /* Drivvo Blue */
+            --accent-color: #2196f3;
             --accent-green: #4caf50;
             --border-color: #2c353d;
             --input-bg: #222b32;
@@ -38,9 +41,8 @@
         h1 {
             font-size: 20px;
             font-weight: 600;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             text-align: center;
-            color: var(--text-color);
             letter-spacing: 0.5px;
         }
 
@@ -54,12 +56,12 @@
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .form-group label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             margin-bottom: 6px;
             color: var(--text-secondary);
@@ -69,7 +71,7 @@
 
         input, select {
             width: 100%;
-            height: 48px;
+            height: 44px;
             padding: 0 14px;
             border: 1px solid var(--border-color);
             border-radius: 10px;
@@ -77,7 +79,6 @@
             box-sizing: border-box;
             background-color: var(--input-bg);
             color: var(--text-color);
-            transition: border-color 0.2s;
         }
 
         input:focus, select:focus {
@@ -85,38 +86,13 @@
             border-color: var(--accent-color);
         }
 
-        /* Standardize input field focus behaviors */
         input[type="date"] {
             color-scheme: dark;
-            display: flex;
-            align-items: center;
-        }
-
-        .file-input-wrapper {
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .file-input-btn {
-            width: 100%;
-            height: 48px;
-            background: var(--input-bg);
-            border: 1px dashed var(--text-secondary);
-            border-radius: 10px;
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-sizing: border-box;
         }
 
         button {
             width: 100%;
-            height: 50px;
+            height: 48px;
             background-color: var(--accent-green);
             color: white;
             border: none;
@@ -132,36 +108,27 @@
             opacity: 0.9;
         }
 
-        button.secondary {
-            background-color: transparent;
-            border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-            margin-top: 4px;
-            height: 44px;
-            font-size: 14px;
-            box-shadow: none;
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
         }
 
-        .log-title-area {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-        }
-
-        .log-title-area h3 {
-            margin: 0;
-            font-size: 14px;
+        .log-title {
+            font-size: 13px;
             color: var(--text-secondary);
             text-transform: uppercase;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+            margin-top: 0;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
         }
 
         .log-item {
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid var(--border-color);
-            font-size: 15px;
+            font-size: 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -174,21 +141,21 @@
         .amount-display {
             font-weight: 700;
             color: var(--accent-color);
-            font-size: 16px;
-        }
-
-        .notes-text {
-            color: var(--text-secondary);
-            font-size: 12px;
-            margin-top: 2px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>EV Expense Tracker Pro</h1>
+    <h1>EV Operational Analytics</h1>
     
+    <div class="card">
+        <h3 class="log-title">Monthly Cost Breakdown</h3>
+        <div class="chart-container">
+            <canvas id="costChart"></canvas>
+        </div>
+    </div>
+
     <div class="card">
         <form id="expenseForm">
             <div class="form-group">
@@ -196,44 +163,28 @@
                 <input type="date" id="date" required>
             </div>
             <div class="form-group">
-                <label for="type">Expense Category</label>
+                <label for="type">Category</label>
                 <select id="type">
                     <option value="Home Charging">⚡ Home Charging</option>
                     <option value="Public DC Charging">🔌 Public DC Charging</option>
                     <option value="Tire Maintenance">🛞 Tire Maintenance</option>
-                    <option value="Insurance & RoadTax">🛡️ Insurance & Road Tax</option>
-                    <option value="Other Costs">📦 Other Costs</option>
+                    <option value="Insurance & Tax">🛡️ Insurance & Tax</option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="amount">Total Amount ($ / RM)</label>
+                <label for="amount">Amount</label>
                 <input type="number" id="amount" step="0.01" placeholder="0.00" required>
             </div>
             <div class="form-group">
-                <label for="notes">Notes / Location / kWh</label>
-                <input type="text" id="notes" placeholder="e.g., 45 kWh @ Gentari Kuantan">
+                <label for="notes">Notes / Details</label>
+                <input type="text" id="notes" placeholder="e.g., kWh or location metrics">
             </div>
-            
-            <div class="form-group">
-                <label>Receipt Attachment</label>
-                <div class="file-input-wrapper">
-                    <div class="file-input-btn" id="fileLabel">📎 Attach Photo / PDF</div>
-                    <input type="file" id="attachment" accept="image/*,application/pdf">
-                </div>
-            </div>
-
-            <button type="submit">Add Entry</button>
+            <button type="submit">Log & Auto-Save CSV</button>
         </form>
     </div>
 
-    <div class="card" style="padding: 12px;">
-        <button id="exportBtn" class="secondary">📊 Export Master CSV to Files</button>
-    </div>
-
     <div class="card">
-        <div class="log-title-area">
-            <h3>Recent Log History</h3>
-        </div>
+        <h3 class="log-title">Recent Ledger Entries</h3>
         <div id="logHistory"></div>
     </div>
 </div>
@@ -242,84 +193,11 @@
     document.getElementById('date').valueAsDate = new Date();
 
     let expenses = JSON.parse(localStorage.getItem('ev_expenses')) || [];
-    let selectedFileBlob = null;
-    let selectedFileName = "";
+    let costChart = null;
 
-    document.getElementById('attachment').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            selectedFileBlob = file;
-            selectedFileName = file.name;
-            document.getElementById('fileLabel').innerText = `✔️ ${file.name.substring(0, 18)}...`;
-            document.getElementById('fileLabel').style.borderColor = "var(--accent-color)";
-            document.getElementById('fileLabel').style.color = "var(--accent-color)";
-        }
-    });
-
-    function updateHistoryDisplay() {
-        const historyContainer = document.getElementById('logHistory');
-        historyContainer.innerHTML = '';
-        
-        const recent = expenses.slice(-5).reverse();
-        if (recent.length === 0) {
-            historyContainer.innerHTML = '<p style="color:var(--text-secondary); font-size:14px; margin:0; text-align:center; padding:10px 0;">No logs committed yet.</p>';
-            return;
-        }
-
-        recent.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'log-item';
-            div.innerHTML = `
-                <div>
-                    <div style="font-weight:600;">${item.type}</div>
-                    <div class="notes-text">${item.date} ${item.notes ? `• ${item.notes}` : ''}</div>
-                </div>
-                <div class="amount-display">${parseFloat(item.amount).toFixed(2)}</div>
-            `;
-            historyContainer.appendChild(div);
-        });
-    }
-
-    document.getElementById('expenseForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const newExpense = {
-            date: document.getElementById('date').value,
-            type: document.getElementById('type').value,
-            amount: document.getElementById('amount').value,
-            notes: document.getElementById('notes').value
-        };
-
-        expenses.push(newExpense);
-        localStorage.setItem('ev_expenses', JSON.stringify(expenses));
-        
-        if (selectedFileBlob) {
-            const url = URL.createObjectURL(selectedFileBlob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Receipt_${newExpense.date}_${selectedFileName}`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            selectedFileBlob = null;
-            selectedFileName = "";
-            document.getElementById('fileLabel').innerText = "📎 Attach Photo / PDF";
-            document.getElementById('fileLabel').style.borderColor = "var(--border-color)";
-            document.getElementById('fileLabel').style.color = "var(--text-secondary)";
-        }
-        
-        document.getElementById('expenseForm').reset();
-        document.getElementById('date').valueAsDate = new Date();
-        
-        updateHistoryDisplay();
-    });
-
-    document.getElementById('exportBtn').addEventListener('click', function() {
-        if (expenses.length === 0) {
-            alert("No data available to clear/export.");
-            return;
-        }
+    // Trigger explicit background file download routing 
+    function autoExportCSVFile() {
+        if (expenses.length === 0) return;
 
         const headers = ["Date", "Category", "Amount", "Notes"];
         const rows = expenses.map(e => `"${e.date}","${e.type}","${e.amount}","${e.notes.replace(/"/g, '""')}"`);
@@ -330,14 +208,111 @@
         
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `Master_EV_Data_${new Date().toISOString().slice(0,10)}.csv`);
+        // Overwriting master file to keep a cleanly consolidated single source record
+        link.setAttribute("download", `Master_EV_Expenses.csv`);
         document.body.appendChild(link);
         
         link.click();
         document.body.removeChild(link);
+    }
+
+    // Process and sort analytical arrays for Chart engine
+    function renderAnalyticsChart() {
+        const structuralData = {};
+        
+        // Group entries into explicit YYYY-MM buckets
+        expenses.forEach(item => {
+            const labelMonth = item.date.substring(0, 7); 
+            structuralData[labelMonth] = (structuralData[labelMonth] || 0) + parseFloat(item.amount);
+        });
+
+        const sortedMonths = Object.keys(structuralData).sort();
+        const costAggregations = sortedMonths.map(m => structuralData[m]);
+
+        const contextElement = document.getElementById('costChart').getContext('2d');
+        
+        if (costChart) {
+            costChart.destroy(); // Clear cache registry before reloading canvas matrix
+        }
+
+        costChart = new Chart(contextElement, {
+            type: 'bar',
+            data: {
+                labels: sortedMonths,
+                datasets: [{
+                    label: 'Total Cost',
+                    data: costAggregations,
+                    backgroundColor: '#2196f3',
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#8a96a0' } },
+                    y: { grid: { color: '#2c353d' }, ticks: { color: '#8a96a0' } }
+                }
+            }
+        });
+    }
+
+    function refreshLedgerHistory() {
+        const container = document.getElementById('logHistory');
+        container.innerHTML = '';
+        
+        const recent = expenses.slice(-3).reverse();
+        if (recent.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-secondary); font-size:13px; margin:0; text-align:center;">No entries saved.</p>';
+            return;
+        }
+
+        recent.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'log-item';
+            div.innerHTML = `
+                <div>
+                    <div style="font-weight:600;">${item.type}</div>
+                    <div style="color:var(--text-secondary); font-size:11px;">${item.date} ${item.notes ? `• ${item.notes}` : ''}</div>
+                </div>
+                <div class="amount-display">${parseFloat(item.amount).toFixed(2)}</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // Central form processing framework
+    document.getElementById('expenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const record = {
+            date: document.getElementById('date').value,
+            type: document.getElementById('type').value,
+            amount: document.getElementById('amount').value,
+            notes: document.getElementById('notes').value
+        };
+
+        expenses.push(record);
+        localStorage.setItem('ev_expenses', JSON.stringify(expenses));
+        
+        // Form field reset logic
+        document.getElementById('amount').value = '';
+        document.getElementById('notes').value = '';
+        document.getElementById('date').valueAsDate = new Date();
+        
+        // Execute UI rendering & automated download piping simultaneously
+        refreshLedgerHistory();
+        renderAnalyticsChart();
+        autoExportCSVFile(); 
     });
 
-    updateHistoryDisplay();
+    // Run structural initialization passes
+    refreshLedgerHistory();
+    renderAnalyticsChart();
 </script>
 
 </body>
