@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EV Expense Tracker</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="EV Tracker">
+    <style>
+        :root {
+            --bg-color: #f2f2f7;
+            --card-color: #ffffff;
+            --text-color: #1c1c1e;
+            --accent-color: #007aff;
+            --border-color: #e5e5ea;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .card {
+            background: var(--card-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #8e8e93;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px; /* Prevents iOS auto-zoom on focus */
+            box-sizing: border-box;
+            background: #fafafa;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        button.secondary {
+            background-color: #e5e5ea;
+            color: var(--text-color);
+            margin-top: 12px;
+        }
+
+        .log-item {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>EV Expense Tracker</h1>
+    
+    <div class="card">
+        <form id="expenseForm">
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" required>
+            </div>
+            <div class="form-group">
+                <label for="type">Expense Type</label>
+                <select id="type">
+                    <option value="Charging">Charging</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Insurance">Insurance</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="amount">Amount ($)</label>
+                <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+                <label for="notes">Notes (Optional)</label>
+                <input type="text" id="notes" placeholder="e.g., Supercharger downtown">
+            </div>
+            <button type="submit">Log Expense</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <button id="exportBtn" class="secondary">Save Log to iPhone Files</button>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 16px;">Recent Entries (Local Cache)</h3>
+        <div id="logHistory"></div>
+    </div>
+</div>
+
+<script>
+    // Automatically set today's date
+    document.getElementById('date').valueAsDate = new Date();
+
+    let expenses = JSON.parse(localStorage.getItem('ev_expenses')) || [];
+
+    function updateHistoryDisplay() {
+        const historyContainer = document.getElementById('logHistory');
+        historyContainer.innerHTML = '';
+        
+        // Show last 5 items
+        const recent = expenses.slice(-5).reverse();
+        if (recent.length === 0) {
+            historyContainer.innerHTML = '<p style="color:#8e8e93; font-size:14px; margin:0;">No entries yet.</p>';
+            return;
+        }
+
+        recent.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'log-item';
+            div.innerHTML = `
+                <div>
+                    <strong>${item.type}</strong> <br>
+                    <small style="color:#8e8e93;">${item.date} ${item.notes ? `• ${item.notes}` : ''}</small>
+                </div>
+                <div style="font-weight:600;">$${parseFloat(item.amount).toFixed(2)}</div>
+            `;
+            historyContainer.appendChild(div);
+        });
+    }
+
+    // Handle Form Submission
+    document.getElementById('expenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const newExpense = {
+            date: document.getElementById('date').value,
+            type: document.getElementById('type').value,
+            amount: document.getElementById('amount').value,
+            notes: document.getElementById('notes').value
+        };
+
+        expenses.push(newExpense);
+        localStorage.setItem('ev_expenses', JSON.stringify(expenses));
+        
+        // Reset form fields except date
+        document.getElementById('amount').value = '';
+        document.getElementById('notes').value = '';
+        
+        updateHistoryDisplay();
+    });
+
+    // Handle Exporting directly to Files via native download
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        if (expenses.length === 0) {
+            alert("No data to export yet!");
+            return;
+        }
+
+        // Generate clean CSV format
+        const headers = ["Date", "Type", "Amount", "Notes"];
+        const rows = expenses.map(e => `"${e.date}","${e.type}","${e.amount}","${e.notes.replace(/"/g, '""')}"`);
+        const csvContent = [headers.join(","), ...rows].join("\n");
+
+        // Create Blob and trigger download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `ev_expenses_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // Initial render
+    updateHistoryDisplay();
+</script>
+
+</body>
+</html>
